@@ -1,0 +1,117 @@
+/* daily-app 共通UI。tokens.css の後に読み込む。
+   ここに「どのアプリにも出てくる部品」だけを置く。アプリ固有の見た目は各 index.html に書く。 */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body{
+  margin:0;
+  overflow-wrap: break-word;
+  font-family: var(--font);
+  font-size: var(--fs-4);
+  line-height: 1.55;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+
+.wrap{ max-width: var(--wrap); margin: 0 auto; padding: var(--sp-4); }
+.wrap.narrow{ max-width: var(--wrap-narrow); }
+
+h1{ font-size: var(--fs-6); margin: 0 0 var(--sp-1); }
+h2{ font-size: var(--fs-5); margin: var(--sp-5) 0 var(--sp-2);
+    border-left: 4px solid var(--accent); padding-left: var(--sp-2); }
+h3{ font-size: var(--fs-3); margin: var(--sp-3) 0 var(--sp-1); color: var(--text-2); }
+p{ margin: 0 0 var(--sp-3); }
+a{ color: var(--accent); }
+
+.sub  { color: var(--text-3); font-size: var(--fs-2); }
+.muted{ color: var(--text-4); }
+.pos{ color: var(--ok); } .warn{ color: var(--warn); } .neg{ color: var(--bad); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* --- アプリ共通ヘッダ（app-shell.js が生成） --- */
+.appbar{
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.appbar .inner{
+  max-width: var(--wrap); margin: 0 auto;
+  padding: var(--sp-2) var(--sp-4);
+  display: flex; align-items: baseline; gap: var(--sp-3);
+}
+.appbar .back{
+  font-size: var(--fs-2); color: var(--text-3);
+  text-decoration: none; white-space: nowrap;
+}
+.appbar .back:hover{ color: var(--accent); }
+.appbar .title{ font-size: var(--fs-5); font-weight: 700; }
+.appbar .summary{ font-size: var(--fs-2); color: var(--text-3); }
+@media (max-width: 560px){ .appbar .summary{ display: none; } }
+
+/* --- 面 --- */
+.card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  padding: var(--sp-3);
+  box-shadow: var(--shadow);
+}
+.cards{ display: grid; gap: var(--sp-3);
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.stack > * + *{ margin-top: var(--sp-3); }
+.row{ display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+
+/* --- 操作 --- */
+.btn{
+  font: inherit; font-size: var(--fs-3); font-weight: 600;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  background: var(--surface); color: var(--text);
+  cursor: pointer;
+}
+.btn:hover{ border-color: var(--accent); color: var(--accent); }
+.btn.primary{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover{ filter: brightness(1.06); color: var(--accent-ink); }
+.btn:disabled{ opacity: .5; cursor: not-allowed; }
+
+input[type="text"], input[type="search"], input[type="number"], textarea, select{
+  font: inherit; font-size: var(--fs-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-1);
+  background: var(--surface); color: var(--text);
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus{
+  outline: 2px solid var(--accent-bg); outline-offset: 0; border-color: var(--accent);
+}
+
+/* --- ラベル --- */
+.badge{
+  display: inline-block;
+  font-size: var(--fs-1); font-weight: 600; line-height: 1.6;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--text-2);
+  border: 1px solid var(--border);
+}
+.badge.accent{ background: var(--accent-bg); color: var(--accent); border-color: #bcd0f7; }
+.badge.ok   { background: #e9f7ef; color: var(--ok);   border-color: #a6ddbf; }
+.badge.warn { background: #fff8e6; color: var(--warn); border-color: #f0d089; }
+
+/* --- 表 --- */
+table{ width: 100%; border-collapse: collapse;
+       background: var(--surface); border: 1px solid var(--border);
+       border-radius: var(--r-2); overflow: hidden; }
+th, td{ padding: var(--sp-2) var(--sp-3); text-align: left;
+        border-bottom: 1px solid var(--border-2); font-variant-numeric: tabular-nums; }
+th{ background: var(--surface-2); font-size: var(--fs-2); color: var(--text-2); }
+tr:last-child td{ border-bottom: 0; }
+
+/* --- 空状態・脚注 --- */
+.empty{ color: var(--text-4); font-size: var(--fs-3);
+        padding: var(--sp-6) var(--sp-4); text-align: center; }
+.foot{ color: var(--text-4); font-size: var(--fs-1); margin-top: var(--sp-6); }
+code{ background: var(--surface-2); padding: 1px 4px; border-radius: var(--r-1); }
