@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>テンプレート — daily-app</title>
+<link rel="stylesheet" href="../../shared/tokens.css">
+<link rel="stylesheet" href="../../shared/base.css">
+<style>
+  /* アプリ固有のスタイルだけをここに書く。色・余白・角丸は tokens.css の変数を使う。 */
+  .out{ font-size: var(--fs-7); font-weight: 700; }
+</style>
+</head>
+<body data-app-title="テンプレート" data-app-summary="新規アプリの雛形">
+<script src="../../shared/app-shell.js" defer></script>
+
+<div class="wrap narrow stack">
+  <div class="card stack">
+    <h3>入力</h3>
+    <input type="text" id="src" placeholder="なにか入力">
+    <div class="row">
+      <button class="btn primary" id="run">実行</button>
+      <button class="btn" id="clear">クリア</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>結果</h3>
+    <div class="out num" id="out">—</div>
+  </div>
+
+  <div class="foot">
+    このファイルを <code>docs/apps/&lt;slug&gt;/index.html</code> に複製し、
+    <code>docs/apps.json</code> に1件追記すれば一覧に並ぶ。
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+$('run').addEventListener('click', () => {
+  const v = $('src').value.trim();
+  $('out').textContent = v ? v.length + ' 文字' : '—';
+});
+
+$('clear').addEventListener('click', () => {
+  $('src').value = '';
+  $('out').textContent = '—';
+});
+</script>
+</body>
+</html>

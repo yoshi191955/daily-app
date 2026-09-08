@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>daily-app — 一覧</title>
+<link rel="stylesheet" href="shared/tokens.css">
+<link rel="stylesheet" href="shared/base.css">
+<style>
+  .hero{ padding: var(--sp-5) 0 var(--sp-3); }
+  .counts{ display:flex; gap: var(--sp-2); margin: var(--sp-3) 0; flex-wrap: wrap; }
+  .filters{ display:flex; gap: var(--sp-2); margin-bottom: var(--sp-4); flex-wrap: wrap; }
+  .filters input{ flex: 1 1 200px; min-width: 0; max-width: 280px; width: auto; }
+  .chip{ font: inherit; font-size: var(--fs-2); font-weight:600;
+         padding: var(--sp-1) var(--sp-3); border:1px solid var(--border);
+         border-radius: var(--r-pill); background: var(--surface);
+         color: var(--text-2); cursor:pointer; }
+  .chip.on{ background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  a.app{ text-decoration:none; color:inherit; display:block; }
+  a.app:hover .card{ border-color: var(--accent); }
+  .app .name{ font-size: var(--fs-5); font-weight:700; }
+  .app .meta{ display:flex; justify-content:space-between; align-items:center;
+              gap: var(--sp-2); margin-bottom: var(--sp-1); }
+  .app .desc{ font-size: var(--fs-3); color: var(--text-3); min-height: 2.6em; }
+  .app .tags{ margin-top: var(--sp-2); display:flex; gap: var(--sp-1); flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1>daily-app</h1>
+    <div class="sub">1日1アプリ。<code>docs/apps/&lt;slug&gt;/</code> に置いて <code>docs/apps.json</code> に登録する。</div>
+  </div>
+
+  <div class="counts" id="counts"></div>
+
+  <div class="filters">
+    <input type="search" id="q" placeholder="名前・説明・タグで絞り込み" aria-label="検索">
+    <button class="chip on" data-status="all">すべて</button>
+    <button class="chip" data-status="polished">整備済</button>
+    <button class="chip" data-status="draft">未整備</button>
+    <button class="chip" data-status="template">雛形</button>
+  </div>
+
+  <div class="cards" id="list"></div>
+  <div class="empty" id="empty" hidden>該当するアプリがありません。</div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const STATUS = {
+  polished: { label: '整備済', cls: 'badge ok' },
+  draft:    { label: '未整備', cls: 'badge warn' },
+  template: { label: '雛形',   cls: 'badge' }
+};
+
+let APPS = [], filter = 'all', query = '';
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => (
+  { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]
+)); }
+
+function matches(a){
+  if (filter !== 'all' && a.status !== filter) return false;
+  if (!query) return true;
+  const hay = [a.name, a.summary, a.slug, (a.tags || []).join(' ')].join(' ').toLowerCase();
+  return hay.includes(query);
+}
+
+function render(){
+  const list = document.getElementById('list');
+  const shown = APPS.filter(matches);
+
+  list.innerHTML = shown.map(a => {
+    const st = STATUS[a.status] || STATUS.draft;
+    const tags = (a.tags || []).map(t => `<span class="badge">${esc(t)}</span>`).join('');
+    return `<a class="app" href="apps/${esc(a.slug)}/index.html">
+      <div class="card">
+        <div class="meta">
+          <span class="name">${esc(a.name)}</span>
+          <span class="${st.cls}">${st.label}</span>
+        </div>
+        <div class="desc">${esc(a.summary)}</div>
+        <div class="tags">${tags}</div>
+        <div class="sub num" style="margin-top:var(--sp-2)">${esc(a.date || '')}</div>
+      </div>
+    </a>`;
+  }).join('');
+
+  document.getElementById('empty').hidden = shown.length > 0;
+
+  const by = s => APPS.filter(a => a.status === s).length;
+  document.getElementById('counts').innerHTML =
+    `<span class="badge accent">全 ${APPS.length}</span>` +
+    `<span class="badge ok">整備済 ${by('polished')}</span>` +
+    `<span class="badge warn">未整備 ${by('draft')}</span>`;
+}
+
+document.getElementById('q').addEventListener('input', e => {
+  query = e.target.value.trim().toLowerCase();
+  render();
+});
+
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    filter = btn.dataset.status;
+    render();
+  });
+});
+
+fetch('apps.json', { cache: 'no-store' })
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(d => {
+    APPS = (d.apps || []).slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    document.getElementById('foot').textContent = '索引の正本は docs/apps.json（更新: ' + (d.updated || '—') + '）';
+    render();
+  })
+  .catch(err => {
+    document.getElementById('empty').hidden = false;
+    document.getElementById('empty').textContent =
+      'apps.json を読めませんでした（' + err.message + '）。file:// で直接開くと fetch が失敗します。'
+      + 'リポジトリ直下で python3 -m http.server 8000 を実行し http://localhost:8000/docs/ を開いてください。';
+  });
+</script>
+<script>
+window.addEventListener('load',()=>setTimeout(()=>{
+  let worst=[];
+  document.querySelectorAll('*').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(r.right>document.documentElement.clientWidth+1)
+      worst.push(el.tagName+'.'+el.className+' right='+Math.round(r.right)+' w='+Math.round(r.width));
+  });
+  document.body.setAttribute('data-probe','SCROLLW='+document.documentElement.scrollWidth+
+    ' CLIENTW='+document.documentElement.clientWidth+' || '+worst.slice(0,8).join(' | '));
+},300));
+</script>
+<script>
+window.addEventListener('load',()=>setTimeout(()=>{
+  let worst=[];
+  document.querySelectorAll('*').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(r.right>document.documentElement.clientWidth+1)
+      worst.push(el.tagName+'.'+el.className+' right='+Math.round(r.right));
+  });
+  document.body.setAttribute('data-probe','SCROLLW='+document.documentElement.scrollWidth+
+    ' CLIENTW='+document.documentElement.clientWidth+' || '+worst.slice(0,8).join(' | '));
+},300));
+</script>
+</body>
+</html>
