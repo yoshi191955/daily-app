@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1日3つしか書けないTodo — daily-app</title>
+<link rel="stylesheet" href="../../shared/tokens.css">
+<link rel="stylesheet" href="../../shared/base.css">
+<style>
+  .today{ display:flex; justify-content:space-between; align-items:baseline;
+          gap: var(--sp-2); margin-bottom: var(--sp-3); }
+  .today .date{ font-size: var(--fs-5); font-weight:700; }
+  .today .left{ font-size: var(--fs-2); color: var(--text-3); }
+
+  .slots{ display:grid; gap: var(--sp-2); }
+
+  .slot{ display:flex; align-items:center; gap: var(--sp-3);
+         background: var(--surface); border:1px solid var(--border);
+         border-radius: var(--r-2); padding: var(--sp-3);
+         min-height: 3.4em; }
+  .slot.empty{ background:transparent; border-style:dashed; color: var(--text-4);
+               font-size: var(--fs-3); justify-content:center; }
+
+  .slot .no{ font-size: var(--fs-2); color: var(--text-4); font-weight:700;
+             flex:0 0 auto; width: 1.4em; }
+  .slot .txt{ flex:1 1 auto; font-size: var(--fs-4); }
+  .slot.done .txt{ text-decoration: line-through; color: var(--text-4); }
+
+  .check{ flex:0 0 auto; width: 1.6em; height: 1.6em; padding:0;
+          border:1px solid var(--border); border-radius: var(--r-pill);
+          background: var(--surface); cursor:pointer; line-height:1; }
+  .check:hover{ border-color: var(--accent); }
+  .slot.done .check{ background: var(--ok); border-color: var(--ok); color:#fff; }
+
+  .undo{ flex:0 0 auto; font-size: var(--fs-1); color: var(--text-3);
+         background:none; border:0; padding:0; cursor:pointer; text-decoration:underline; }
+  .undo:hover{ color: var(--bad); }
+
+  .composer{ margin-top: var(--sp-4); }
+  .composer .row{ flex-wrap: nowrap; }
+  .composer input{ flex:1 1 auto; min-width:0; }
+
+  .deny{ color: var(--bad); font-size: var(--fs-3); font-weight:600;
+         margin-top: var(--sp-2); }
+
+  @keyframes shake{
+    0%,100%{ transform: translateX(0) }
+    20%{ transform: translateX(-7px) }
+    40%{ transform: translateX(7px) }
+    60%{ transform: translateX(-4px) }
+    80%{ transform: translateX(4px) }
+  }
+  .shake{ animation: shake .38s; }
+  .shake .slot{ border-color: var(--bad); }
+  @media (prefers-reduced-motion: reduce){ .shake{ animation:none } }
+</style>
+</head>
+<body data-app-title="1日3つしか書けないTodo" data-app-summary="今日やることは3つまで">
+<script src="../../shared/app-shell.js" defer></script>
+
+<div class="wrap narrow">
+  <div class="today">
+    <span class="date num" id="date">—</span>
+    <span class="left" id="left"></span>
+  </div>
+
+  <div class="slots" id="slots"></div>
+
+  <div class="composer">
+    <div class="row">
+      <input type="text" id="src" maxlength="60" placeholder="今日やること" aria-label="今日やること">
+      <button class="btn primary" id="add">追加</button>
+    </div>
+    <div class="deny" id="deny" hidden></div>
+  </div>
+
+  <div class="foot">
+    書けるのは1日3つまで。<b>書いたものは消せません</b>（追加した直後だけ取り消せます）。
+    日付が変わると、その日の3つはリセットされます。<br>
+    保存先はこのブラウザの中だけです。他の端末には共有されません。
+  </div>
+</div>
+
+<script>
+const MAX = 3;
+const KEY = 'daily-app:three-todos';
+const $ = id => document.getElementById(id);
+
+function today(){
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+function load(){
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && s.date === today() && Array.isArray(s.items)) return s.items.slice(0, MAX);
+    }
+  } catch (e) { /* 読めなくても空で始める */ }
+  return [];
+}
+
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify({ date: today(), items })); }
+  catch (e) { /* 保存できなくても操作は続けられる */ }
+}
+
+let items = load();
+let justAdded = -1;   // 直近に追加した位置。リロードすると消える
+
+function render(){
+  $('date').textContent = today();
+  $('left').textContent = items.length >= MAX
+    ? '今日はもう書けません'
+    : 'あと ' + (MAX - items.length) + ' つ書けます';
+
+  const slots = $('slots');
+  slots.innerHTML = '';
+
+  for (let i = 0; i < MAX; i++) {
+    const el = document.createElement('div');
+    const it = items[i];
+
+    if (!it) {
+      el.className = 'slot empty';
+      el.textContent = (i + 1) +' つ目';
+      slots.appendChild(el);
+      continue;
+    }
+
+    el.className = 'slot' + (it.done ? ' done' : '');
+
+    const no = document.createElement('span');
+    no.className = 'no';
+    no.textContent = (i + 1);
+
+    const check = document.createElement('button');
+    check.className = 'check';
+    check.textContent = it.done ? '✓' : '';
+    check.setAttribute('aria-label', it.done ? '未完了に戻す' : '完了にする');
+    check.addEventListener('click', () => { it.done = !it.done; save(); render(); });
+
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    txt.textContent = it.text;
+
+    el.appendChild(no);
+    el.appendChild(check);
+    el.appendChild(txt);
+
+    if (i === justAdded) {
+      const undo = document.createElement('button');
+      undo.className = 'undo';
+      undo.textContent = '取り消す';
+      undo.addEventListener('click', () => {
+        items.splice(i, 1);
+        justAdded = -1;
+        save(); render();
+        $('src').focus();
+      });
+      el.appendChild(undo);
+    }
+
+    slots.appendChild(el);
+  }
+}
+
+function deny(msg){
+  const d = $('deny');
+  d.textContent = msg;
+  d.hidden = false;
+  const s = $('slots');
+  s.classList.remove('shake');
+  void s.offsetWidth;          // アニメーションを再生し直す
+  s.classList.add('shake');
+}
+
+function add(){
+  const v = $('src').value.trim();
+
+  if (items.length >= MAX) {
+    deny('今日はもう書けません。明日また3つ。');
+    return;
+  }
+  if (!v) {
+    deny('やることを書いてください。');
+    return;
+  }
+
+  items.push({ text: v, done: false });
+  justAdded = items.length - 1;
+  $('src').value = '';
+  $('deny').hidden = true;
+  save();
+  render();
+}
+
+$('add').addEventListener('click', add);
+$('src').addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+
+render();
+</script>
+</body>
+</html>

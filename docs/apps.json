@@ -1,13 +1,26 @@
 {
-  "updated": "2026-09-08",
+  "updated": "2026-09-09",
   "apps": [
     {
       "slug": "_template",
       "name": "テンプレート",
       "summary": "新規アプリの雛形。docs/apps/_template を複製して使う。",
       "date": "2026-09-08",
-      "tags": ["雛形"],
+      "tags": [
+        "雛形"
+      ],
       "status": "template"
+    },
+    {
+      "slug": "three-todos",
+      "name": "1日3つしか書けないTodo",
+      "summary": "今日やることは3つまで。4つ目は書けない。",
+      "date": "2026-09-09",
+      "tags": [
+        "制約シリーズ",
+        "初期10本 #1"
+      ],
+      "status": "draft"
     }
   ]
 }
