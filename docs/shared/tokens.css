@@ -26,6 +26,8 @@
   --ok:   #12855b;
   --warn: #b7791f;
   --bad:  #c0392b;
+  --bad-bg:     #fdecea;
+  --bad-border: #f0b3ab;
 
   /* 文字サイズ（本文 14px 基準） */
   --fs-1: 11px;
@@ -35,6 +37,7 @@
   --fs-5: 15px;
   --fs-6: 20px;
   --fs-7: 26px;
+  --fs-8: 30px;
 
   /* 余白（4px グリッド） */
   --sp-1: 4px;

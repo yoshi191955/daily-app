@@ -3,6 +3,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* hidden 属性は display 指定より強くする。
+   ブラウザ既定の [hidden]{display:none} は .foo{display:flex} に負けるため。 */
+[hidden]{ display: none !important; }
+
 body{
   margin:0;
   overflow-wrap: break-word;

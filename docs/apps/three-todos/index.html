@@ -7,51 +7,54 @@
 <link rel="stylesheet" href="../../shared/tokens.css">
 <link rel="stylesheet" href="../../shared/base.css">
 <style>
-  .today{ display:flex; justify-content:space-between; align-items:baseline;
-          gap: var(--sp-2); margin-bottom: var(--sp-3); }
-  .today .date{ font-size: var(--fs-5); font-weight:700; }
-  .today .left{ font-size: var(--fs-2); color: var(--text-3); }
+  /* 日付を主役に置く。「1日3つ」が何の1日なのかを最初に見せる。 */
+  .head{ margin: var(--sp-5) 0 var(--sp-4); }
+  .head .md{ font-size: var(--fs-8); font-weight:800; line-height:1.15;
+             letter-spacing:-.01em; }
+  .head .dow{ color: var(--accent); }
+  .head .left{ margin-top: var(--sp-1); font-size: var(--fs-3); color: var(--text-3); }
+  .head .left.full{ color: var(--text); font-weight:700; }
 
-  .slots{ display:grid; gap: var(--sp-2); }
-
+  /* 行はカードで囲わず、区切り線だけで並べる。 */
+  .slots{ border-top:1px solid var(--border); }
   .slot{ display:flex; align-items:center; gap: var(--sp-3);
-         background: var(--surface); border:1px solid var(--border);
-         border-radius: var(--r-2); padding: var(--sp-3);
-         min-height: 3.4em; }
-  .slot.empty{ background:transparent; border-style:dashed; color: var(--text-4);
-               font-size: var(--fs-3); justify-content:center; }
+         padding: var(--sp-3) var(--sp-1);
+         border-bottom:1px solid var(--border); min-height:3.2em; }
 
-  .slot .no{ font-size: var(--fs-2); color: var(--text-4); font-weight:700;
-             flex:0 0 auto; width: 1.4em; }
-  .slot .txt{ flex:1 1 auto; font-size: var(--fs-4); }
-  .slot.done .txt{ text-decoration: line-through; color: var(--text-4); }
-
-  .check{ flex:0 0 auto; width: 1.6em; height: 1.6em; padding:0;
-          border:1px solid var(--border); border-radius: var(--r-pill);
-          background: var(--surface); cursor:pointer; line-height:1; }
+  .check{ flex:0 0 auto; width:1.5em; height:1.5em; padding:0;
+          border:2px solid var(--border); border-radius: var(--r-1);
+          background: var(--surface); cursor:pointer;
+          font-size: var(--fs-3); line-height:1; color: transparent; }
   .check:hover{ border-color: var(--accent); }
-  .slot.done .check{ background: var(--ok); border-color: var(--ok); color:#fff; }
+  .slot.done .check{ background: var(--ok); border-color: var(--ok); color: var(--accent-ink); }
+
+  .txt{ flex:1 1 auto; font-size: var(--fs-4); }
+  .slot.done .txt{ text-decoration: line-through; color: var(--text-4); }
 
   .undo{ flex:0 0 auto; font-size: var(--fs-1); color: var(--text-3);
          background:none; border:0; padding:0; cursor:pointer; text-decoration:underline; }
   .undo:hover{ color: var(--bad); }
 
-  .composer{ margin-top: var(--sp-4); }
-  .composer .row{ flex-wrap: nowrap; }
-  .composer input{ flex:1 1 auto; min-width:0; }
+  /* まだ無い枠は破線で示す。埋まっていない数が一目で分かる。 */
+  .slot.empty{ color: var(--text-4); font-size: var(--fs-3); }
+  .slot.empty .box{ flex:0 0 auto; width:1.5em; height:1.5em;
+                    border:2px dashed var(--border); border-radius: var(--r-1); }
 
-  .deny{ color: var(--bad); font-size: var(--fs-3); font-weight:600;
+  .composer{ margin-top: var(--sp-4); }
+  .composer .row{ flex-wrap:nowrap; }
+  .composer input{ flex:1 1 auto; min-width:0; }
+  .composer.bad input{ border-color: var(--bad); background: var(--bad-bg); }
+
+  .deny{ display:flex; gap: var(--sp-2); align-items:baseline;
+         color: var(--bad); font-size: var(--fs-3); font-weight:600;
          margin-top: var(--sp-2); }
 
   @keyframes shake{
-    0%,100%{ transform: translateX(0) }
-    20%{ transform: translateX(-7px) }
-    40%{ transform: translateX(7px) }
-    60%{ transform: translateX(-4px) }
-    80%{ transform: translateX(4px) }
+    0%,100%{ transform:translateX(0) } 20%{ transform:translateX(-7px) }
+    40%{ transform:translateX(7px) } 60%{ transform:translateX(-4px) }
+    80%{ transform:translateX(4px) }
   }
   .shake{ animation: shake .38s; }
-  .shake .slot{ border-color: var(--bad); }
   @media (prefers-reduced-motion: reduce){ .shake{ animation:none } }
 </style>
 </head>
@@ -59,19 +62,19 @@
 <script src="../../shared/app-shell.js" defer></script>
 
 <div class="wrap narrow">
-  <div class="today">
-    <span class="date num" id="date">—</span>
-    <span class="left" id="left"></span>
+  <div class="head">
+    <div class="md" id="md">—</div>
+    <div class="left" id="left"></div>
   </div>
 
   <div class="slots" id="slots"></div>
 
-  <div class="composer">
+  <div class="composer" id="composer">
     <div class="row">
       <input type="text" id="src" maxlength="60" placeholder="今日やること" aria-label="今日やること">
       <button class="btn primary" id="add">追加</button>
     </div>
-    <div class="deny" id="deny" hidden></div>
+    <div class="deny" id="deny" hidden><span aria-hidden="true">⚠</span><span id="denyMsg"></span></div>
   </div>
 
   <div class="foot">
@@ -84,27 +87,24 @@
 <script>
 const MAX = 3;
 const KEY = 'daily-app:three-todos';
+const DOW = ['日', '月', '火', '水', '木', '金', '土'];
 const $ = id => document.getElementById(id);
 
-function today(){
-  const d = new Date();
-  const p = n => String(n).padStart(2, '0');
+function todayKey(){
+  const d = new Date(), p = n => String(n).padStart(2, '0');
   return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
 }
 
 function load(){
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const s = JSON.parse(raw);
-      if (s && s.date === today() && Array.isArray(s.items)) return s.items.slice(0, MAX);
-    }
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && s.date === todayKey() && Array.isArray(s.items)) return s.items.slice(0, MAX);
   } catch (e) { /* 読めなくても空で始める */ }
   return [];
 }
 
 function save(){
-  try { localStorage.setItem(KEY, JSON.stringify({ date: today(), items })); }
+  try { localStorage.setItem(KEY, JSON.stringify({ date: todayKey(), items })); }
   catch (e) { /* 保存できなくても操作は続けられる */ }
 }
 
@@ -112,42 +112,47 @@ let items = load();
 let justAdded = -1;   // 直近に追加した位置。リロードすると消える
 
 function render(){
-  $('date').textContent = today();
-  $('left').textContent = items.length >= MAX
-    ? '今日はもう書けません'
-    : 'あと ' + (MAX - items.length) + ' つ書けます';
+  const d = new Date();
+  $('md').innerHTML = (d.getMonth() + 1) + '月' + d.getDate() + '日 '
+                    + '<span class="dow">' + DOW[d.getDay()] + '</span>';
+
+  const full = items.length >= MAX;
+  const left = $('left');
+  left.textContent = full ? '今日の3つは埋まりました' : 'あと ' + (MAX - items.length) + ' つ書けます';
+  left.classList.toggle('full', full);
 
   const slots = $('slots');
   slots.innerHTML = '';
 
   for (let i = 0; i < MAX; i++) {
-    const el = document.createElement('div');
     const it = items[i];
+    const el = document.createElement('div');
 
     if (!it) {
       el.className = 'slot empty';
-      el.textContent = (i + 1) +' つ目';
+      const box = document.createElement('span');
+      box.className = 'box';
+      const label = document.createElement('span');
+      label.textContent = (i + 1) + 'つ目';
+      el.appendChild(box);
+      el.appendChild(label);
       slots.appendChild(el);
       continue;
     }
 
     el.className = 'slot' + (it.done ? ' done' : '');
 
-    const no = document.createElement('span');
-    no.className = 'no';
-    no.textContent = (i + 1);
-
     const check = document.createElement('button');
     check.className = 'check';
-    check.textContent = it.done ? '✓' : '';
-    check.setAttribute('aria-label', it.done ? '未完了に戻す' : '完了にする');
+    check.textContent = '✓';
+    check.setAttribute('aria-pressed', it.done ? 'true' : 'false');
+    check.setAttribute('aria-label', it.text + (it.done ? ' を未完了に戻す' : ' を完了にする'));
     check.addEventListener('click', () => { it.done = !it.done; save(); render(); });
 
     const txt = document.createElement('span');
     txt.className = 'txt';
     txt.textContent = it.text;
 
-    el.appendChild(no);
     el.appendChild(check);
     el.appendChild(txt);
 
@@ -158,6 +163,7 @@ function render(){
       undo.addEventListener('click', () => {
         items.splice(i, 1);
         justAdded = -1;
+        clearDeny();
         save(); render();
         $('src').focus();
       });
@@ -168,10 +174,18 @@ function render(){
   }
 }
 
+function clearDeny(){
+  $('deny').hidden = true;
+  $('composer').classList.remove('bad');
+}
+
+/* エラーの見せ方は実例に合わせ、原因である入力欄を赤くして直下に文言を出す。
+   リストは揺らすだけにする（「もう入らない」絵を残すため）。 */
 function deny(msg){
-  const d = $('deny');
-  d.textContent = msg;
-  d.hidden = false;
+  $('denyMsg').textContent = msg;
+  $('deny').hidden = false;
+  $('composer').classList.add('bad');
+
   const s = $('slots');
   s.classList.remove('shake');
   void s.offsetWidth;          // アニメーションを再生し直す
@@ -181,25 +195,20 @@ function deny(msg){
 function add(){
   const v = $('src').value.trim();
 
-  if (items.length >= MAX) {
-    deny('今日はもう書けません。明日また3つ。');
-    return;
-  }
-  if (!v) {
-    deny('やることを書いてください。');
-    return;
-  }
+  if (items.length >= MAX) { deny('今日はもう書けません。明日また3つ。'); return; }
+  if (!v)                  { deny('やることを書いてください。'); return; }
 
   items.push({ text: v, done: false });
   justAdded = items.length - 1;
   $('src').value = '';
-  $('deny').hidden = true;
+  clearDeny();
   save();
   render();
 }
 
 $('add').addEventListener('click', add);
 $('src').addEventListener('keydown', e => { if (e.key === 'Enter') add(); });
+$('src').addEventListener('input', () => { if (items.length < MAX) clearDeny(); });
 
 render();
 </script>
